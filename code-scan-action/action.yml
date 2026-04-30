@@ -36,6 +36,12 @@ inputs:
     description: 'Enable scanning PRs from forked repositories'
     required: false
     default: 'false'
+  repository:
+    description: 'Repository to scan (owner/repo). Defaults to current repo.'
+    required: false
+  pr-number:
+    description: 'Pull request number. Defaults to current PR.'
+    required: false
 
 runs:
   using: 'node20'

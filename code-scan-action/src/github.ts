@@ -23,14 +23,32 @@ import {
  * Get GitHub context from the current workflow.
  * Supports both pull_request events and workflow_dispatch (with pr_number input).
  * @param token GitHub token (required for workflow_dispatch to fetch PR details)
+ * @param repositoryOverride Optional repository override (owner/repo)
+ * @param prNumberOverride Optional PR number override
  * @returns GitHub PR context
  */
-export async function getGitHubContext(token: string): Promise<PullRequestContext> {
+export async function getGitHubContext(
+  token: string,
+  repositoryOverride?: string,
+  prNumberOverride?: number,
+): Promise<PullRequestContext> {
   const context = github.context;
+  let owner = context.repo.owner;
+  let repo = context.repo.repo;
+
+  if (repositoryOverride) {
+    const [overrideOwner, overrideRepo] = repositoryOverride.split('/');
+    if (overrideOwner && overrideRepo) {
+      owner = overrideOwner;
+      repo = overrideRepo;
+    }
+  }
 
   // For workflow_dispatch, read pr_number from event inputs
-  if (context.eventName === 'workflow_dispatch') {
-    const prNumberInput = (context.payload.inputs as Record<string, string> | undefined)?.pr_number;
+  if (context.eventName === 'workflow_dispatch' || prNumberOverride) {
+    const prNumberInput =
+      prNumberOverride?.toString() ||
+      (context.payload.inputs as Record<string, string> | undefined)?.pr_number;
     if (!prNumberInput) {
       throw new Error(
         'workflow_dispatch requires a pr_number input. Add inputs: { pr_number: { required: true } } to your workflow.',
@@ -44,14 +62,14 @@ export async function getGitHubContext(token: string): Promise<PullRequestContex
 
     const octokit = new Octokit({ auth: token });
     const { data: pr } = await octokit.pulls.get({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      owner,
+      repo,
       pull_number: prNumber,
     });
 
     return {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      owner,
+      repo,
       number: pr.number,
       sha: pr.head.sha,
     };
@@ -65,8 +83,8 @@ export async function getGitHubContext(token: string): Promise<PullRequestContex
   }
 
   return {
-    owner: context.repo.owner,
-    repo: context.repo.repo,
+    owner,
+    repo,
     number: context.payload.pull_request.number,
     sha: context.payload.pull_request.head.sha,
   };

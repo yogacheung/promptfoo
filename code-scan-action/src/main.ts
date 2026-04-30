@@ -29,6 +29,8 @@ interface ActionInputs {
   guidanceText: string;
   guidanceFile: string;
   githubToken: string;
+  repository?: string;
+  prNumber?: number;
 }
 
 function formatError(error: unknown): string {
@@ -43,6 +45,8 @@ function getActionInputs(): ActionInputs {
     guidanceText: core.getInput('guidance'),
     guidanceFile: core.getInput('guidance-file'),
     githubToken: core.getInput('github-token', { required: true }),
+    repository: core.getInput('repository'),
+    prNumber: parseInt(core.getInput('pr-number'), 10) || undefined,
   };
 }
 
@@ -419,7 +423,7 @@ async function runCodeScan(): Promise<void> {
 
   core.info('🔍 Starting Promptfoo Code Scan...');
 
-  const context = await getGitHubContext(inputs.githubToken);
+  const context = await getGitHubContext(inputs.githubToken, inputs.repository, inputs.prNumber);
   core.info(`📋 Scanning PR #${context.number} in ${context.owner}/${context.repo}`);
 
   core.info('🔎 Checking if this is a setup PR...');
